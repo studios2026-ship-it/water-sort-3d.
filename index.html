@@ -1,0 +1,360 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Sort 3D</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#101329;--panel:#1b2040;--text:#f5f6ff;
+  --muted:#a4aacb;--accent:#8b7cff;
+}
+body{
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:Arial,sans-serif;
+  background:radial-gradient(ellipse at top,#292b59,#101329 65%);
+}
+button{font:inherit;cursor:pointer;border:0}
+.app{max-width:1050px;margin:auto;padding:24px 18px 40px}
+header{text-align:center}
+.logo{font-size:12px;letter-spacing:5px;color:#a9a0ff}
+h1{font-size:clamp(30px,6vw,48px);margin:12px 0}
+h1 span{color:#a69aff}
+.subtitle{color:var(--muted);font-size:14px}
+.stats{display:flex;justify-content:center;gap:12px;margin:24px 0}
+.stat{
+  background:#ffffff0b;border:1px solid #ffffff15;
+  border-radius:14px;padding:12px 22px;min-width:105px;
+}
+.stat small{display:block;color:var(--muted);font-size:11px}
+.stat strong{display:block;font-size:21px;margin-top:5px}
+.progress{height:5px;background:#ffffff15;border-radius:10px;
+  max-width:450px;margin:0 auto 28px;overflow:hidden}
+#progress{height:100%;width:5%;background:linear-gradient(90deg,#8b7cff,#5ce4d2)}
+.toolbar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.btn{
+  color:white;background:#ffffff10;border:1px solid #ffffff20;
+  padding:11px 17px;border-radius:12px;transition:.2s;
+}
+.btn:hover{background:#ffffff20;transform:translateY(-2px)}
+.btn.primary{background:linear-gradient(135deg,#8272ff,#5e50d9)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+#message{height:24px;text-align:center;margin:20px 0 5px;
+  color:#bdb6ff;font-size:14px}
+.board{
+  display:flex;justify-content:center;align-items:flex-end;
+  flex-wrap:wrap;gap:clamp(15px,3vw,32px);
+  min-height:290px;padding:25px 8px 35px;
+}
+.tube-wrap{width:64px;display:flex;flex-direction:column;
+  align-items:center;gap:12px}
+.tube-number{font-size:12px;color:#8289b2}
+.tube{
+  width:58px;height:190px;position:relative;
+  border:2px solid #d9e6ff8c;border-top:3px solid #edf3ffbd;
+  border-radius:9px 9px 25px 25px;
+  background:linear-gradient(100deg,#ffffff1a,#ffffff03 35%,#ffffff18 80%,#ffffff05);
+  box-shadow:inset 5px 0 8px #ffffff0b,
+    inset -5px 0 8px #00000015,0 14px 25px #00000030;
+  overflow:hidden;cursor:pointer;transform:perspective(500px) rotateX(-2deg);
+  transition:transform .2s,border-color .2s;
+}
+.tube:before{
+  content:"";position:absolute;z-index:5;top:0;left:4px;
+  width:7px;height:80%;border-radius:10px;
+  background:linear-gradient(#ffffff65,#ffffff05);
+  pointer-events:none;
+}
+.tube.selected{transform:translateY(-17px) scale(1.04);
+  border-color:#b4aaff;box-shadow:0 0 22px #8272ff60}
+.tube.target{border-color:#5ce4d2}
+.liquid{
+  position:absolute;bottom:0;left:0;right:0;height:25%;
+  transition:height .35s ease,background .3s;
+  box-shadow:inset 0 5px 7px #ffffff30,inset 0 -4px 7px #00000018;
+}
+.liquid:before{
+  content:"";position:absolute;top:0;left:0;right:0;height:7px;
+  background:#ffffff35;border-radius:50%;
+}
+.tube.pouring{animation:tilt .45s ease-in-out}
+@keyframes tilt{
+  0%,100%{transform:rotate(0)}
+  45%{transform:rotate(-18deg) translateY(-8px)}
+}
+@keyframes pop{50%{transform:scale(1.12)}}
+.tube.complete{animation:pop .35s ease}
+.bottom{text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+.overlay{
+  position:fixed;inset:0;background:#080a18c9;backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;padding:20px;z-index:10;
+}
+.modal{
+  text-align:center;background:#202445;border:1px solid #ffffff20;
+  border-radius:24px;padding:35px 28px;max-width:360px;width:100%;
+  box-shadow:0 25px 80px #0007;
+}
+.modal h2{font-size:29px;margin:0 0 12px}
+.modal p{color:#b9bfdc;line-height:1.6;font-size:14px}
+.modal .btn{margin-top:10px}
+.hidden{display:none!important}
+footer{text-align:center;color:#646b91;font-size:12px;margin-top:30px}
+@media(max-width:500px){
+  .app{padding:20px 10px}
+  .stats{gap:7px}
+  .stat{padding:10px 13px;min-width:85px}
+  .board{gap:16px 13px;min-height:250px}
+  .tube-wrap{width:52px}
+  .tube{width:48px;height:155px}
+  .btn{padding:10px 12px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">PUZZLE LAB</div>
+    <h1>Water Sort <span>3D</span></h1>
+    <p class="subtitle">Pour, sort, and solve. One color per tube.</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><small>LEVEL</small><strong id="level">01 / 20</strong></div>
+    <div class="stat"><small>MOVES</small><strong id="moves">0</strong></div>
+    <div class="stat"><small>TIME</small><strong id="time">00:00</strong></div>
+  </div>
+  <div class="progress"><div id="progress"></div></div>
+
+  <div class="toolbar">
+    <button class="btn" id="restart">↻ Restart</button>
+    <button class="btn" id="undo">↶ Undo</button>
+    <button class="btn" id="pause">Ⅱ Pause</button>
+    <button class="btn" id="sound">♫ Sound On</button>
+  </div>
+
+  <div id="message">Choose a tube to begin.</div>
+  <main class="board" id="board"></main>
+  <div class="bottom">Select a tube, then select another tube to pour.</div>
+  <footer>WATER SORT 3D · 20 LEVELS</footer>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Paused</h2>
+    <p id="modalText">Take your time. Your progress is saved.</p>
+    <button class="btn primary" id="resume">▶ Resume</button>
+    <button class="btn" id="modalRestart">↻ Restart Level</button>
+  </div>
+</div>
+
+<script>
+const COLORS=[
+ '#ff5e83','#49c9ff','#ffd166','#a78bfa',
+ '#4ce0b3','#ff984f','#f472e8','#b6e65d',
+ '#6685ff','#ff7373','#44d4cf','#e6a5ff',
+ '#e7ba75','#7de0ff','#f49fca','#a8a8ff',
+ '#a5df8a','#ffcf70','#80b7ff','#ff91a4'
+];
+
+const $=id=>document.getElementById(id);
+let level=1, tubes=[], initial=[], selected=-1;
+let moves=0, seconds=0, paused=false, won=false;
+let history=[], soundOn=true, audio=null;
+let timer=null, busy=false;
+
+function randShuffle(arr){
+ for(let i=arr.length-1;i>0;i--){
+  let j=Math.floor(Math.random()*(i+1));
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+ }
+ return arr;
+}
+
+// Each color has four units. Two tubes start empty.
+function createLevel(n){
+ const count=Math.min(2+Math.floor((n+1)/1.5),20);
+ const colors=COLORS.slice(0,count);
+ let pool=[];
+ colors.forEach(c=>{for(let i=0;i<4;i++)pool.push(c)});
+ randShuffle(pool);
+ let result=[];
+ for(let i=0;i<count;i++)result.push(pool.slice(i*4,i*4+4));
+ result.push([],[]);
+ return result;
+}
+
+function loadLevel(n){
+ level=n;tubes=createLevel(n);
+ initial=JSON.parse(JSON.stringify(tubes));
+ selected=-1;moves=0;seconds=0;history=[];
+ paused=false;won=false;busy=false;
+ $('overlay').classList.add('hidden');
+ $('pause').textContent='Ⅱ Pause';
+ $('message').textContent='Choose a tube to begin.';
+ render();updateStats();
+}
+
+function render(){
+ const board=$('board');board.innerHTML='';
+ tubes.forEach((tube,i)=>{
+  const wrap=document.createElement('div');
+  wrap.className='tube-wrap';
+  const number=document.createElement('div');
+  number.className='tube-number';
+  number.textContent='TUBE '+(i+1);
+  const el=document.createElement('div');
+  el.className='tube';
+  if(i===selected)el.classList.add('selected');
+  el.setAttribute('role','button');
+  el.setAttribute('aria-label','Tube '+(i+1)+', '+tube.length+' units');
+  el.tabIndex=0;
+  tube.forEach((color,j)=>{
+   const liquid=document.createElement('div');
+   liquid.className='liquid';
+   liquid.style.background=`linear-gradient(90deg,${shade(color)},${color} 45%,${shade(color)})`;
+   liquid.style.bottom=(j*25)+'%';
+   liquid.style.height='25%';
+   el.appendChild(liquid);
+  });
+  el.addEventListener('click',()=>choose(i));
+  el.addEventListener('keydown',e=>{
+   if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(i)}
+  });
+  wrap.append(number,el);board.appendChild(wrap);
+ });
+}
+
+function shade(hex){
+ let n=parseInt(hex.slice(1),16);
+ let r=Math.max(0,((n>>16)&255)-35);
+ let g=Math.max(0,((n>>8)&255)-35);
+ let b=Math.max(0,(n&255)-35);
+ return `rgb(${r},${g},${b})`;
+}
+
+function choose(i){
+ if(paused||won||busy)return;
+ if(selected===-1){
+  if(tubes[i].length===0)return;
+  selected=i;render();return;
+ }
+ if(selected===i){selected=-1;render();return}
+ const from=tubes[selected],to=tubes[i];
+ if(to.length===4||!from.length||
+    (to.length&&to[to.length-1]!==from[from.length-1])){
+  selected=i;
+  if(!tubes[i].length)selected=i;
+  $('message').textContent='Choose an empty tube or a matching color.';
+  render();return;
+ }
+ history.push(JSON.stringify(tubes));
+ const color=from[from.length-1];
+ let amount=0;
+ while(from.length&&from[from.length-1]===color&&to.length<4){
+  to.push(from.pop());amount++;
+ }
+ const old=selected;selected=-1;busy=true;moves++;
+ render();
+ const tubeEl=$('board').children[old]?.querySelector('.tube');
+ if(tubeEl)tubeEl.classList.add('pouring');
+ playPour();
+ $('message').textContent='Nice pour!';
+ setTimeout(()=>{
+  busy=false;render();updateStats();
+  if(isWon())levelWon();
+ },400);
+}
+
+function isWon(){
+ return tubes.every(t=>t.length===0||
+  (t.length===4&&t.every(c=>c===t[0])));
+}
+
+function levelWon(){
+ won=true;
+ if(level===20){
+  showModal('🎉 You did it!','You completed all 20 levels. Amazing work!');
+  $('resume').textContent='Play Again';
+  $('resume').onclick=()=>loadLevel(1);
+ }else{
+  showModal('✨ Level Complete!','All colors sorted. Ready for the next challenge?');
+  $('resume').textContent='Next Level →';
+  $('resume').onclick=()=>loadLevel(level+1);
+ }
+}
+
+function updateStats(){
+ $('level').textContent=String(level).padStart(2,'0')+' / 20';
+ $('moves').textContent=moves;
+ $('time').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+
+  String(seconds%60).padStart(2,'0');
+ $('progress').style.width=(level/20*100)+'%';
+ $('undo').disabled=!history.length||paused||busy;
+}
+
+function showModal(title,text){
+ $('modalTitle').textContent=title;
+ $('modalText').textContent=text;
+ $('overlay').classList.remove('hidden');
+}
+
+function togglePause(){
+ if(won)return;
+ paused=!paused;
+ $('pause').textContent=paused?'▶ Resume':'Ⅱ Pause';
+ if(paused)showModal('Ⅱ Paused','Your timer is stopped. Resume when you are ready.');
+ else $('overlay').classList.add('hidden');
+ updateStats();
+}
+
+$('pause').onclick=()=>{
+ if(paused){
+  paused=false;$('pause').textContent='Ⅱ Pause';
+  $('overlay').classList.add('hidden');updateStats();
+ }else togglePause();
+};
+$('resume').onclick=()=>{
+ if(won){loadLevel(1);return}
+ paused=false;$('pause').textContent='Ⅱ Pause';
+ $('overlay').classList.add('hidden');updateStats();
+};
+$('restart').onclick=()=>loadLevel(level);
+$('modalRestart').onclick=()=>loadLevel(level);
+$('undo').onclick=()=>{
+ if(paused||busy||!history.length)return;
+ tubes=JSON.parse(history.pop());moves=Math.max(0,moves-1);
+ selected=-1;render();updateStats();
+ $('message').textContent='Last move undone.';
+};
+
+$('sound').onclick=()=>{
+ soundOn=!soundOn;
+ $('sound').textContent=soundOn?'♫ Sound On':'♫ Sound Off';
+};
+
+function playPour(){
+ if(!soundOn)return;
+ try{
+  audio=audio||new(window.AudioContext||window.webkitAudioContext)();
+  const osc=audio.createOscillator(),gain=audio.createGain();
+  osc.type='sine';osc.frequency.setValueAtTime(500,audio.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(240,audio.currentTime+.18);
+  gain.gain.setValueAtTime(.08,audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.2);
+  osc.connect(gain);gain.connect(audio.destination);
+  osc.start();osc.stop(audio.currentTime+.2);
+ }catch(e){}
+}
+
+timer=setInterval(()=>{
+ if(!paused&&!won){
+  seconds++;updateStats();
+ }
+},1000);
+
+loadLevel(1);
+</script>
+</body>
+</html>
